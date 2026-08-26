@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ff7a18"/>
+      <stop offset="0.5" stop-color="#af002d"/>
+      <stop offset="1" stop-color="#320b86"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#g1)" />
+  <g fill="rgba(255,255,255,0.12)">
+    <circle cx="120" cy="120" r="80"/>
+    <circle cx="680" cy="80" r="140"/>
+    <circle cx="520" cy="380" r="120"/>
+  </g>
+  <g transform="translate(60,120)" fill="#fff">
+    <text x="0" y="0" font-size="42" font-family="Arial, Helvetica, sans-serif">Modern</text>
+    <text x="0" y="48" font-size="28" font-family="Arial, Helvetica, sans-serif">Beautiful product imagery</text>
+  </g>
+</svg>

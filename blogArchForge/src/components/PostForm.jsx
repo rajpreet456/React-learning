@@ -1,102 +1,110 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import Input from "./common/Input";
 import Select from "./common/Select";
 import RTE from "./RTE";
+import postService from "../services/postService";
 
-export default function PostForm() {
-  // Initialize react-hook-form
-  const { register, handleSubmit, watch, setValue, control, getValues } = useForm({
+export default function PostForm({ post }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState(null);
+
+  const { register, handleSubmit, watch, setValue, control } = useForm({
     defaultValues: {
-      title: "",
-      slug: "",
-      content: "<p>Start drafting your post...</p>",
-      status: "active",
+      title: post?.title || "",
+      slug: post?.slug || "",
+      content: post?.content || "",
+      status: post?.status || "active",
     },
   });
 
-  //  Pure function: Converts title text to a clean URL-friendly slug
   const slugTransform = useCallback((value) => {
     if (value && typeof value === "string") {
       return value
         .trim()
         .toLowerCase()
-        .replace(/[^a-zA-Z0-9\s]/g, "") // Strip special symbols (@, !, #)
-        .replace(/\s+/g, "-");          // Replace spaces with dashes
+        .replace(/[^a-zA-Z0-9\s-]/g, "")
+        .replace(/\s+/g, "-");
     }
     return "";
   }, []);
 
-  // Listen to input changes: When user types a title, update the slug field
   useEffect(() => {
     const subscription = watch((value, { name }) => {
       if (name === "title") {
         setValue("slug", slugTransform(value.title), { shouldValidate: true });
       }
     });
-
-    // Cleanup subscription when component unmounts
     return () => subscription.unsubscribe();
   }, [watch, slugTransform, setValue]);
 
-  // Form Submit handler: Receives clean validated data ready for Spring Boot!
-  const submitHandler = (data) => {
-    console.log("=========================================");
-    console.log("READY FOR SPRING BOOT POST REQUEST DTO:");
-    console.log(data);
-    console.log("=========================================");
-    alert(`Post Created Successfully!\nCheck your browser console (F12) to see the payload.`);
+  const submitHandler = async (data) => {
+    setIsSubmitting(true);
+    setFeedbackMessage(null);
+
+    try {
+      const response = await postService.createPost(data);
+      console.log("Post creation response:", response);
+      setFeedbackMessage({
+        type: "success",
+        text: `Article published successfully! (Slug: ${data.slug})`,
+      });
+    } catch (error) {
+      console.error("Submission failed:", error);
+      setFeedbackMessage({
+        type: "error",
+        text: "Failed to publish article. Please check your connection.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit(submitHandler)} className="space-y-6 max-w-5xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <div className="lg:col-span-2 space-y-4">
-          <Input
-            label="Post Title"
-            placeholder="e.g. Complete Guide to Spring Security"
-            {...register("title", { required: true })}
-          />
-
-          <Input
-            label="URL Slug (Auto-Generated)"
-            placeholder="auto-generated-slug"
-            {...register("slug", { required: true })}
-            onInput={(e) => {
-              // Allows manual editing of slug if the user wants to tweak it
-              setValue("slug", slugTransform(e.currentTarget.value), { shouldValidate: true });
-            }}
-          />
-
-          <RTE
-            label="Post Content (Rich Text)"
-            name="content"
-            control={control}
-            defaultValue={getValues("content")}
-          />
-        </div>
-
-        {/* Right Column (1/3 width): Metadata & Publishing */}
-        <div className="space-y-4 bg-gray-900/80 p-5 rounded-xl border border-gray-800 h-fit">
-          <h3 className="text-lg font-semibold text-white border-b border-gray-800 pb-2">
-            Publishing Options
-          </h3>
-
-          <Select
-            label="Publication Status"
-            options={["active", "inactive"]}
-            {...register("status", { required: true })}
-          />
-
-          <button
-            type="submit"
-            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow transition-colors"
+    <form onSubmit={handleSubmit(submitHandler)} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-4">
+        {feedbackMessage && (
+          <div
+            className={`p-3 rounded-lg text-sm font-medium ${
+              feedbackMessage.type === "success"
+                ? "bg-emerald-950/50 border border-emerald-800 text-emerald-300"
+                : "bg-red-950/50 border border-red-800 text-red-300"
+            }`}
           >
-            Publish Article
-          </button>
-        </div>
+            {feedbackMessage.text}
+          </div>
+        )}
 
+        <Input
+          label="Title"
+          placeholder="Article Title"
+          {...register("title", { required: true })}
+        />
+        <Input
+          label="Slug (URL)"
+          placeholder="auto-generated-slug"
+          {...register("slug", { required: true })}
+        />
+        <RTE label="Content" name="content" control={control} />
+      </div>
+
+      <div className="space-y-4">
+        <Select
+          label="Status"
+          options={["active", "inactive"]}
+          {...register("status", { required: true })}
+        />
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className={`w-full py-2.5 rounded-lg text-white font-medium transition-all ${
+            isSubmitting
+              ? "bg-indigo-900 cursor-not-allowed text-gray-400"
+              : "bg-indigo-600 hover:bg-indigo-500"
+          }`}
+        >
+          {isSubmitting ? "Publishing..." : "Publish Article"}
+        </button>
       </div>
     </form>
   );
